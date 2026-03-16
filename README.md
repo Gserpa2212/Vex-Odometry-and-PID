@@ -51,3 +51,58 @@ Competition-tested autonomous control system.
 Notes and Limitations
 
 The current implementation tracks forward displacement (Y direction) and robot heading rather than full two-dimensional position. Extending the system to track both X and Y position would enable coordinate-based navigation and more advanced autonomous path planning.
+
+## Code Highlights
+
+Below are several key parts of the control system used in the robot.
+
+### PID Controller
+
+A reusable PID controller class was implemented to control both forward movement and turning. The controller calculates motor output based on the difference between the target value and the current measured value.
+
+```cpp
+class PID {
+public:
+    double kP, kI, kD;
+    double error, lastError, integral, derivative;
+
+    PID(double p, double i, double d) : kP(p), kI(i), kD(d), error(0), lastError(0), integral(0), derivative(0) {}
+
+    double calculate(double target, double currentPos) {
+        error = target - currentPos;
+        integral += error;
+        derivative = error - lastError;
+        lastError = error;
+
+        return kP * error + kI * integral + kD * derivative;
+    }
+};
+```
+
+### Odometry Calculation
+
+The robot estimates its heading using the difference between left and right wheel displacement.
+
+```cpp
+double deltaTheta = (deltaR - deltaL) / trackWidth;
+botAngle += deltaTheta;
+```
+
+Forward displacement is estimated using the average motion of both wheels.
+
+```cpp
+Ydist += (deltaL + deltaR) / 2;
+```
+
+### Motion Control Loop
+
+Motor power is calculated using the PID controller and applied to both sides of the drivetrain.
+
+```cpp
+double motorPower = controller.calculate(targetY, Ydist);
+
+leftSide.spin(forward, motorPower, percent);
+rightSide.spin(forward, motorPower, percent);
+```
+
+These control loops allow the robot to drive to target distances and perform controlled turns during autonomous routines.
