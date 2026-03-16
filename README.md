@@ -88,12 +88,19 @@ double deltaTheta = (deltaR - deltaL) / trackWidth;
 botAngle += deltaTheta;
 ```
 
-Forward displacement is estimated using the average motion of both wheels.
+The robot estimates forward displacement using wheel odometry. When the robot is moving nearly straight, displacement is approximated using the average wheel movement. When the robot is turning, an arc-based approximation is used to estimate motion.
 
 ```cpp
-Ydist += (deltaL + deltaR) / 2;
+// Calculate Y distance using botAngle
+if (fabs(botAngle) < 0.01) {
+    Ydist += (deltaL + deltaR) / 2;  // Approximate straight movement
+} else {
+    double arcRadius = (deltaR + deltaL) / (2 * botAngle);
+    Ydist += arcRadius * sin(botAngle);
+}
 ```
 
+This allows the robot to estimate displacement during both straight and curved motion.
 ### Motion Control Loop
 
 Motor power is calculated using the PID controller and applied to both sides of the drivetrain.
