@@ -78,6 +78,47 @@ public:
     }
 };
 ```
+### Multithreaded Odometry Processing
+
+Odometry calculations run continuously in a separate thread so that position estimates update in real time while motion control loops are executing. This prevents blocking behavior that would occur if sensor processing and motion control were handled sequentially.
+
+```cpp
+void odometry() {
+    double trackWidth = 2.18;
+    double wheelDiameter = 2.75;
+    double wheelCircumference = M_PI * wheelDiameter;
+    double scalingFactor = wheelCircumference / 360.0;
+
+    double prevLReading = LeftDeg.angle(degrees);
+    double prevRReading = RightDeg.angle(degrees);
+
+    while (true) {
+        double newL = LeftDeg.angle(degrees);
+        double newR = RightDeg.angle(degrees);
+
+        double deltaL = newL - prevLReading;
+        double deltaR = newR - prevRReading;
+
+        if (deltaL > 180) deltaL -= 360;
+        if (deltaL < -180) deltaL += 360;
+        if (deltaR > 180) deltaR -= 360;
+        if (deltaR < -180) deltaR += 360;
+
+        deltaL *= scalingFactor;
+        deltaR *= scalingFactor;
+
+        prevLReading = newL;
+        prevRReading = newR;
+
+        this_thread::sleep_for(15);
+    }
+}
+```
+Odometry calculations run continuously in a separate thread so that position estimates update in real time while motion control loops are executing. The algorithm also corrects for potentiometer wraparound at 0°/360° to prevent large false displacement readings.
+
+```cpp
+thread mythread = thread(odometry);
+```
 
 ### Odometry Calculation
 
@@ -87,6 +128,7 @@ The robot estimates its heading using the difference between left and right whee
 double deltaTheta = (deltaR - deltaL) / trackWidth;
 botAngle += deltaTheta;
 ```
+
 
 The robot estimates forward displacement using wheel odometry. When the robot is moving nearly straight, displacement is approximated using the average wheel movement. When the robot is turning, an arc-based approximation is used to estimate motion.
 
